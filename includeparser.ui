@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1567</width>
-    <height>673</height>
+    <height>711</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,30 +33,11 @@
      <string>F:\C++\CAN\include</string>
     </property>
    </widget>
-   <widget class="QTextBrowser" name="textBrowser">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>40</y>
-      <width>421</width>
-      <height>571</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Courier New</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-    <property name="lineWrapMode">
-     <enum>QTextEdit::NoWrap</enum>
-    </property>
-   </widget>
    <widget class="QPushButton" name="pushButton">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>620</y>
+      <y>660</y>
       <width>91</width>
       <height>23</height>
      </rect>
@@ -65,46 +46,27 @@
      <string>Сканировать</string>
     </property>
    </widget>
-   <widget class="QTextBrowser" name="textBrowser_2">
-    <property name="geometry">
-     <rect>
-      <x>440</x>
-      <y>40</y>
-      <width>1121</width>
-      <height>571</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Courier New</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-    <property name="lineWrapMode">
-     <enum>QTextEdit::NoWrap</enum>
-    </property>
-   </widget>
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
-      <x>60</x>
-      <y>230</y>
-      <width>1221</width>
-      <height>321</height>
+      <x>10</x>
+      <y>40</y>
+      <width>1551</width>
+      <height>611</height>
      </rect>
+    </property>
+    <property name="editTriggers">
+     <set>QAbstractItemView::NoEditTriggers</set>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_2">
+   <widget class="QLineEdit" name="lineEdit">
     <property name="geometry">
      <rect>
-      <x>200</x>
-      <y>620</y>
-      <width>75</width>
-      <height>23</height>
+      <x>160</x>
+      <y>660</y>
+      <width>371</width>
+      <height>20</height>
      </rect>
-    </property>
-    <property name="text">
-     <string>PushButton</string>
     </property>
    </widget>
   </widget>
