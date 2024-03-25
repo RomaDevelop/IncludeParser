@@ -4,6 +4,7 @@
 #include <vector>
 using namespace std;
 
+#include <QDialog>
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -20,9 +21,11 @@ public:
 	~IncludeParser();
 
 private slots:
-	void on_pushButton_clicked();
+	void on_pushButtonScan_clicked();
 
 	void on_tableWidget_cellDoubleClicked(int row, int column);
+
+	void on_pushButtonMassUpdate_clicked();
 
 private:
 	Ui::IncludeParser *ui;

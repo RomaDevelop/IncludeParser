@@ -1,10 +1,14 @@
 #include "includeparser.h"
 #include "ui_includeparser.h"
 
+#include <windows.h>
+
+#include <memory>
 #include <algorithm>
 #include <vector>
 using namespace std;
 
+#include <QLineEdit>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -12,310 +16,171 @@ using namespace std;
 #include <QDateTime>
 #include <QMessageBox>
 #include <QCheckBox>
+#include <QVBoxLayout>
 
+#include "MyQFileDir.h"
 #include "MyQShortings.h"
+#include "MyQShellExecute.h"
 #include "MyQStr.h"
+#include "MyQDifferend.h"
 
-class Files
-{
-public:
-	QFileInfo leftFile;
-	vector<pair<QTableWidgetItem*,QFileInfo*>> items_files;
-	QFileInfoList rightFiles;
-};
+#include "checkboxdialog.h"
+#include "filesitems.h"
 
-class FileItem
-{
-public:
-	QFileInfo info;
-	QTableWidgetItem *itemFile;
-	QTableWidgetItem *itemModif;
-};
-
-class FilesNew
-{
-public:
-	QString name;
-	QTableWidgetItem *item;
-	FileItem fileItem;
-};
-
-vector<Files> vectFiles;
-
-Ui::IncludeParser *uiObj;
-QString dateFormat = "yyyy.MM.dd hh:mm:ss:zzz";
-QString backupPath;
+vectFilesItems vfi;
 
 IncludeParser::IncludeParser(QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::IncludeParser)
 {
 	ui->setupUi(this);
-	uiObj = ui;
 	this->move(30,30);
 
-	toSave.push_back(ui->lineEditIncludePath);
+	toSave.push_back(ui->textEditScan);
+	toSave.push_back(ui->lineEditExts);
+	toSave.push_back(ui->textEditExeptFName);
+	toSave.push_back(ui->textEditExeptFPath);
+	toSave.push_back(ui->checkBoxHideIfOne);
+
+	QAction *mShowInExplorer = new QAction("Показать в проводнике", ui->tableWidget);
+	ui->tableWidget->addAction(mShowInExplorer);
+	ui->tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
+	connect(mShowInExplorer, &QAction::triggered,
+			[this](){ ShellExecutePath(ui->tableWidget->item(ui->tableWidget->currentRow(),1)->text()); });
 
 	QDir pathBackup(QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files");
 	if(!pathBackup.exists()) pathBackup.mkdir(pathBackup.path());
 	pathBackup.setPath(pathBackup.path() + "/backup");
 	if(!pathBackup.exists()) pathBackup.mkdir(pathBackup.path());
-	if(!pathBackup.exists()) { QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла резервного копирования. Резервные копии не будут сохраняться!"); return; }
-	backupPath = pathBackup.path();
-
-	QFile file(QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files/settings.stgs");
-	if(!file.exists()) QMessageBox::information(this, "Ошибка", "Отсутствует файл настроек "+file.fileName()+" Установлены по умолчанию.");
-	else
+	if(!pathBackup.exists())
 	{
-		QString Settings;
-		file.open(QIODevice::ReadOnly);
-		Settings = file.readAll();
-		QString save_version = Settings.left(Settings.indexOf("[endSetting]"));
-		if(save_version.indexOf("save_version 002") != -1)
-		{
-			QString spl="[endSetting]";
-			int count=Settings.count(spl);
-			for(int i=1; i<count; i++)
-			{
-				QString setting = MyStr::GetElemetFromStrings(Settings,spl,i);
-				QString name = MyStr::GetElemetFromStrings(setting,"[s;]",1);
-				QString className = MyStr::GetElemetFromStrings(setting,"[s;]",2);
-				QString value = MyStr::GetElemetFromStrings(setting,"[s;]",3);
-
-				QWidget *component = this->findChild<QWidget*>(name);
-				if(component!=NULL)
-				{
-					if(className=="QLineEdit") 			((QLineEdit*)component)->setText(value);
-				}
-			}
-		}
-		else QMb(this,"Ошибка чтения настроек.", "Не известная версия сохранения");
+		QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла резервного копирования. Резервные копии не будут сохраняться!");
+		return;
 	}
+	vfi.backupPath = pathBackup.path();
+
+	QString settingsFile = QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files/settings.stgs";
+	QStringList pustishka;
+	if(!mqd::LoadSettings(settingsFile, toSave, pustishka))
+		QMb(this,"Ошибка чтения настроек", "Не удалось загрузить настройки, будут установлены по умолчанию");
 }
 
 IncludeParser::~IncludeParser()
 {
-	QDir pathSave(QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files");
-	if(!pathSave.exists()) pathSave.mkdir(pathSave.path());
-	if(!pathSave.exists()) { QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла настроек, невозможно сохранить настройки"); return; }
-	QFile file(pathSave.path() + "/settings.stgs");
-	QString Settings = "save_version 002[endSetting]\n";
-	for(unsigned int i=0; i<toSave.size(); i++)
-		{
-		QString class_name=toSave[i]->metaObject()->className();
-		QString name=toSave[i]->objectName();
+	QString pathFiles = mqd::GetPathToExe()+"/files";
+	if(!MQFD::CreatePath(pathFiles))
+		QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла настроек, невозможно сохранить настройки");
 
-		if(class_name=="QCheckBox") Settings += "toSave[s;]"+name+"[s;]"+class_name+"[s;]"+QString::number(static_cast<QCheckBox*>(toSave[i])->isChecked())+"[s;]";
-		if(class_name=="QLineEdit") Settings += "toSave[s;]"+name+"[s;]"+class_name+"[s;]"+static_cast<QLineEdit*>(toSave[i])->text()+"[s;]";
-		Settings += "[endSetting]";
-		}
-	file.open(QIODevice::WriteOnly);
-	file.write(Settings.toUtf8());
+	QString settingsFile = pathFiles + "/settings.stgs";
+	if(!mqd::SaveSettings(settingsFile, toSave, {}))
+		QMb(this,"Error", "Не удалось сохранить файл настроек "+settingsFile);
+
 	delete ui;
 }
 
-int GetIndex(QString text)
+void IncludeParser::on_pushButtonScan_clicked()
 {
-	for(int i=0; i<uiObj->tableWidget->rowCount(); i++)
-	{
-		if(uiObj->tableWidget->item(i,0)->text() == text)
-		{
-			return i;
-		}
-	}
-	return -1;
-}
+	vfi.ScanFiles(ui->textEditScan->toPlainText().split("\n"),
+			  ui->lineEditExts->text().split(";"),
+			  ui->textEditExeptFName->toPlainText().split("\n"),
+			  ui->textEditExeptFPath->toPlainText().split("\n"),
+			  ui->checkBoxHideIfOne->isChecked());
 
-void PrintVectFiles(QTableWidget *table)
-{
-	table->clear();
-	table->setColumnCount(4);
-	table->setColumnWidth(0, table->width()*0.20);
-	table->setColumnWidth(1, table->width()*0.10);
-	table->setColumnWidth(2, table->width()*0.50);
-	table->setColumnWidth(3, table->width()*0.10);
-	//while(1000 >= table->rowCount()) table->insertRow(0);
-
-	int index=0;
-	int indexRight = 0;
-	for(auto &vf:vectFiles)
-	{
-		while(index >= table->rowCount()) table->insertRow(index);
-		table->setItem(index, 0, new QTableWidgetItem(vf.leftFile.fileName()));
-		table->setItem(index, 1, new QTableWidgetItem(vf.leftFile.lastModified().toString(dateFormat)));
-		vf.items_files.push_back({table->item(index,1), &vf.leftFile});
-		indexRight = index;
-		index++;
-		for(auto &f:vf.rightFiles)
-		{
-			while(indexRight >= table->rowCount()) table->insertRow(indexRight);
-			table->setItem(indexRight, 2, new QTableWidgetItem(f.filePath()));
-			table->setItem(indexRight, 3, new QTableWidgetItem(f.lastModified().toString(dateFormat)));
-			vf.items_files.push_back({table->item(indexRight,3), &f});
-			indexRight++;
-		}
-		if(indexRight > index) index = indexRight;
-	}
-}
-
-void IncludeParser::on_pushButton_clicked()
-{
-	ui->lineEditIncludePath->setText(ui->lineEditIncludePath->text().replace("\\","/"));
-
-	QDir dirLeft(ui->lineEditIncludePath->text());
-
-	QFileInfoList dirContentLeft = dirLeft.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
-	QFileInfoList dirContentRight;
-
-	QString allFiles;
-	vectFiles.clear();
-	for(auto &f:dirContentLeft)
-	{
-		Files files;
-		files.leftFile = f;
-		vectFiles.push_back(files);
-		allFiles += f.fileName();
-	}
-
-	QDir dirRight = dirLeft;
-	dirRight.cdUp();
-	QDirIterator it(dirRight.path(), QStringList() << "*.h", QDir::NoFilter, QDirIterator::Subdirectories);
-	while (it.hasNext())
-	{
-		QFileInfo f(it.next());
-
-		if(f.filePath().indexOf("build-") == -1 &&
-				allFiles.indexOf(f.fileName()) != -1 &&
-				f.filePath().indexOf(dirLeft.path()) == -1)
-		{
-			dirContentRight.append(f);
-		}
-	}
-
-	for(auto &f:dirContentRight)
-	{
-		bool find = false;
-		for(auto &vf:vectFiles)
-		{
-			if(vf.leftFile.fileName() == f.fileName())
-			{
-				find = true;
-				vf.rightFiles.push_back(f);
-			}
-		}
-		if(!find) qdbg << "ошибка работы, не дожно быть таких файлов ("+ f.filePath() +") в списке dirContentRight";
-	}
-
-	PrintVectFiles(ui->tableWidget);
-	for(auto &vf:vectFiles)
-	{
-		QString MaxVal = vf.items_files[0].first->text();
-		for(auto i:vf.items_files)
-			if(MaxVal < i.first->text()) MaxVal = i.first->text();
-
-		for(auto i:vf.items_files)
-			if(i.first->text() == MaxVal) i.first->setBackgroundColor(QColor(146,208,80));
-			else i.first->setBackgroundColor(QColor(255,180,180));
-	}
-}
-
-void replaceFile(QFileInfo &src, QFileInfo &dst)
-{
-	QFile fileToReplace(dst.filePath());
-	QString backupFile = backupPath + "/" + QDateTime::currentDateTime().toString(dateFormat).replace(':','.') + " " + dst.fileName();
-	if(!fileToReplace.copy(backupFile)) QMb(nullptr,"Ошибка","Не удалось создать backup-файл" + backupFile);
-	else
-	{
-		if(!fileToReplace.remove()) QMb(nullptr,"Ошибка","Не удалось удалить файл " + fileToReplace.fileName());
-		if(!QFile::copy(src.filePath(),dst.filePath())) QMb(nullptr,"Ошибка","Не удалось создать файл " + dst.fileName());
-	}
+	vfi.PrintVectFiles(ui->tableWidget);
 }
 
 void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 {
-	ui->lineEdit->setText("row="+QSn(row)+" col="+QSn(column));
 	QTableWidgetItem *item = ui->tableWidget->item(row, column);
-	QTableWidgetItem *findedFileItem {nullptr};
-	QFileInfo *findedFileInfo {nullptr};
-	Files *filesFind {nullptr};
 
-	for(uint i=0; i<vectFiles.size(); i++)
+	FilesItems *filesFind {nullptr};
+	FileItem *fileFind {nullptr};
+
+	for(uint i=0; i<vfi.vectFiles.size(); i++)
 	{
-		for(uint j=0; j<vectFiles[i].items_files.size(); j++)
-			if(vectFiles[i].items_files[j].first == item)
+		for(uint j=0; j<vfi.vectFiles[i].filesItems.size(); j++)
+			if(vfi.vectFiles[i].filesItems[j].itemFile == item || vfi.vectFiles[i].filesItems[j].itemModif == item)
 			{
-				findedFileItem = vectFiles[i].items_files[j].first;
-				findedFileInfo = vectFiles[i].items_files[j].second;
-				filesFind = &vectFiles[i];
+				filesFind = &vfi.vectFiles[i];
+				fileFind = &vfi.vectFiles[i].filesItems[j];
 			}
 	}
 
-	if(!findedFileItem || !findedFileInfo) return;
+	if(!filesFind || !fileFind) return;
 
-	QMessageBox messageBox(QMessageBox::Question, "Замена файлов", "Вы кликнули на файл " + findedFileInfo->filePath() + ".\n\nЧто нужно сделать?");
-	messageBox.addButton("Заменить им все аналогичные",QMessageBox::YesRole);
-	messageBox.addButton("Заменить его новейшим",QMessageBox::YesRole);
-	messageBox.addButton("Ничего",QMessageBox::NoRole);
+	QMessageBox messageBox(QMessageBox::Question, "Замена файлов", "Вы кликнули на файл " + fileFind->info.filePath() + ".\n\nЧто нужно сделать?");
+	QString replaceHimByNewest = "    Заменить его новейшим    ";
+	QString replaceAllByHim = "    Заменить им все " + filesFind->name+"    ";
+	QString replaceNothing = "  Ничего  ";
+	if(fileFind->itemFile->backgroundColor() == vfi.colorNew) //порядок кнопок
+	{
+		messageBox.addButton(replaceAllByHim,QMessageBox::YesRole);
+		messageBox.addButton(replaceHimByNewest,QMessageBox::YesRole);
+	}
+	else
+	{
+		messageBox.addButton(replaceHimByNewest,QMessageBox::YesRole);
+		messageBox.addButton(replaceAllByHim,QMessageBox::YesRole);
+	}
+	messageBox.addButton(replaceNothing,QMessageBox::NoRole);
 	int desision =  messageBox.exec();
 
-	if(desision == 0) // вариант 0 - кликнутый копируем на место всех
+	if(messageBox.buttons()[desision]->text() == replaceAllByHim) // кликнутый копируем на место всех
 	{
-		QFileInfoList files;
-		files += filesFind->leftFile;
-		files += filesFind->rightFiles;
-		QFileInfoList filesToReplace;
+		QFileInfoList files = filesFind->GetQFileInfoList();
 
 		// берем все файлы кроме нашаего
+		QFileInfoList filesToReplace;
 		for(auto &f:files)
-			if(f.filePath() != findedFileInfo->filePath())
+			if(f.filePath() != fileFind->info.filePath())
 				filesToReplace += f;
 
-		// формруем QString с именами файлов, которые будут заменены
-		QString filestpReplaceStr;
-		for(auto &f:filesToReplace)
-		{
-			QString fileStrPlus = f.filePath();
-			filestpReplaceStr += fileStrPlus + "    (" + f.lastModified().toString(dateFormat) + ")\n";
-		}
-
 		if(!filesToReplace.empty())
-		{
-			QString replaceFileStr = findedFileInfo->filePath() + "    (" + findedFileItem->text() + ")";
-			if(QMessageBox::question(this, "Замена файлов", "Заменить файлы:\n" + filestpReplaceStr + "\n\nфайлом:\n" + replaceFileStr + "?\n(Резервные копии будут сохранены)",
-									 QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes)
-			{
-				for(auto &f:filesToReplace)
-				{
-					replaceFile(*findedFileInfo,f);
-				}
-			}
-		}
+			MQFD::ReplaceFilesWithBackup(filesToReplace,fileFind->info, vfi.backupPath);
 	}
-	if(desision == 1) // вариант 1 - кликнутый заменяем самым новым
+	else if(messageBox.buttons()[desision]->text() == replaceHimByNewest) // кликнутый заменяем самым новым
 	{
-		QFileInfoList files;
-		files += filesFind->leftFile;
-		files += filesFind->rightFiles;
-
-		QFileInfo newestLastModifFI = files[0];
-		for(auto &f:files)
-			if(f.lastModified() > newestLastModifFI.lastModified())
-				newestLastModifFI = f;
+		QFileInfo newestModifFI = MQFD::GetNewestFI(filesFind->GetQFileInfoList());
 
 		// если наш файл новее новейшего - неправльно определён новейший
-		if(findedFileInfo->lastModified() > newestLastModifFI.lastModified()) QMb(this,"Ошибка","Ошибка desision == 1. Код ошибки 505");
+		if(fileFind->info.lastModified() > newestModifFI.lastModified()) QMb(this,"Ошибка","Ошибка desision == 1. Код ошибки 505");
 
-		if(findedFileInfo->lastModified() == newestLastModifFI.lastModified()) QMb(this,"Замена файлов", "Данный файл является новейшим");
+		if(fileFind->info.lastModified() == newestModifFI.lastModified()) QMb(this,"Замена файлов", "Данный файл является новейшим");
 		else
 		{
-			if(QMessageBox::question(this, "Замена файла", "Заменить файл:\n" + findedFileInfo->filePath() + "\n\nфайлом:\n" + newestLastModifFI.filePath() + "?\n(Резервные копии будут сохранены)",
+			if(QMessageBox::question(this, "Замена файла", "Заменить файл:\n" + fileFind->info.filePath() + "\n\nфайлом:\n"
+									 + newestModifFI.filePath() + "?\n(Резервные копии будут сохранены)",
 									 QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes)
-			{
-				replaceFile(newestLastModifFI,*findedFileInfo);
-			}
+				MQFD::ReplaceFileWhithBacup(newestModifFI, fileFind->info, vfi.backupPath);
 		}
 	}
-	//if(desision == 2)  // Ничего
+	else if(messageBox.buttons()[desision]->text() == replaceNothing) ;  // Ничего
+	else QMb(this,"Error","Error code 50002");
 
-	on_pushButton_clicked();
+	on_pushButtonScan_clicked();
+}
+
+void IncludeParser::on_pushButtonMassUpdate_clicked()
+{
+	CheckBoxDialog *chDial = new CheckBoxDialog;
+	QStringList values;
+
+	for(auto &f:vfi.vectFiles)
+		if(f.needUpdate)
+			values += f.name;
+
+	chDial->Execute(values);
+
+	QStringList chValues = chDial->GetCheckedValues();
+
+	for(int i=0; i<chValues.size(); i++)
+	{
+		for(auto &f:vfi.vectFiles)
+			if(chValues[i] == f.name)
+				f.UpdateFiles();
+	}
+
+	delete chDial;
+
+	on_pushButtonScan_clicked();
 }
