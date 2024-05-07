@@ -80,11 +80,12 @@ IncludeParser::~IncludeParser()
 
 void IncludeParser::on_pushButtonScan_clicked()
 {
-	vfi.ScanFiles(ui->textEditScan->toPlainText().split("\n"),
-			  ui->lineEditExts->text().split(";"),
-			  ui->textEditExeptFName->toPlainText().split("\n"),
-			  ui->textEditExeptFPath->toPlainText().split("\n"),
-			  ui->checkBoxHideIfOne->isChecked());
+	QString res = vfi.ScanFiles(ui->textEditScan->toPlainText().split("\n"),
+								ui->lineEditExts->text().split(";"),
+								ui->textEditExeptFName->toPlainText().split("\n"),
+								ui->textEditExeptFPath->toPlainText().split("\n"),
+								ui->checkBoxHideIfOne->isChecked());
+	if(res != "") QMbw(this, "Errors", "Erros while scan files:\n" + res);
 
 	vfi.PrintVectFiles(ui->tableWidget);
 }

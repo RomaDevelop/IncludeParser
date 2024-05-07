@@ -53,11 +53,11 @@ public:
 
 	bool Check(const QStringList &chekList, QString val);
 	bool CheckExt(const QStringList &chekList, QString val);
-	void ScanFiles(const QStringList &dirsToScan,
-				   const QStringList &exts,
-				   const QStringList &fnameExept,
-				   const QStringList &pathExept,
-				   bool hideOneFile);
+	QString ScanFiles(const QStringList &dirsToScan,
+					  const QStringList &exts,
+					  const QStringList &fnameExept,
+					  const QStringList &pathExept,
+					  bool hideOneFile);
 
 	void PrintVectFiles(QTableWidget *table);
 };

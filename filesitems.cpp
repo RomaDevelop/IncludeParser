@@ -48,33 +48,31 @@ bool vectFilesItems::Check(const QStringList &chekList, QString val)
 }
 
 
-bool vectFilesItems::CheckExt(const QStringList &chekList, QString val)
+bool vectFilesItems::CheckExt(const QStringList &chekList, QString suffix)
 {
 	for(auto c:chekList)
 	{
 		c.remove(" ");
 		c.remove("*.");
-		if(c != "" && val.right(c.length()).toLower() == c) return true;
+		if(c != "" && suffix == c) return true;
 	}
 	return false;
 }
 
-void vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringList &exts, const QStringList &fnameExept, const QStringList &pathExept, bool hideOneFile)
+QString vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringList &exts, const QStringList &fnameExept, const QStringList &pathExept, bool hideOneFile)
 {
+	QString error;
 	vectFiles.clear();
 	for(auto &d:dirsToScan)
 	{
 		QDir dir(d);
-
-		//QDirIterator it(dir.path(), /*exts*/QStringList() << "*.dll", QDir::NoFilter, QDirIterator::Subdirectories);
-		QDirIterator it(dir.path(), QStringList(), QDir::NoFilter, QDirIterator::Subdirectories);
-		while (it.hasNext())
+		if(dir.exists())
 		{
-			QFileInfo f(it.next());
-
-			if(f.filePath().indexOf("build-") == -1)
+			QDirIterator it(dir.path(), QStringList(), QDir::NoFilter, QDirIterator::Subdirectories);
+			while (it.hasNext())
 			{
-				if(Check(fnameExept,f.fileName()) && Check(pathExept,f.filePath()) && CheckExt(exts,f.fileName()))
+				QFileInfo f(it.next());
+				if(Check(fnameExept,f.fileName()) && Check(pathExept,f.filePath()) && CheckExt(exts,f.suffix()))
 				{
 					int ind = IndexOf(f.fileName());
 					if(ind == -1) vectFiles.push_back({f, backupPath});
@@ -82,6 +80,7 @@ void vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringList 
 				}
 			}
 		}
+		else error += "vectFilesItems::ScanFiles dir [" + d + "] doesn't exists\n";
 	}
 
 	if(hideOneFile)
@@ -92,6 +91,7 @@ void vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringList 
 	sort(vectFiles.begin(),vectFiles.end(),[](FilesItems a, FilesItems b){
 		return a.name < b.name;
 	});
+	return error;
 }
 
 void vectFilesItems::PrintVectFiles(QTableWidget *table)
