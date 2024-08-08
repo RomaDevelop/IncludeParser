@@ -21,10 +21,9 @@ using namespace std;
 #include "MyQFileDir.h"
 #include "MyQShortings.h"
 #include "MyQShellExecute.h"
-#include "MyQStr.h"
-#include "MyQDifferend.h"
+#include "MyQDifferent.h"
+#include "MyQDialogs.h"
 
-#include "checkboxdialog.h"
 #include "filesitems.h"
 
 vectFilesItems vfi;
@@ -46,7 +45,7 @@ IncludeParser::IncludeParser(QWidget *parent)
 	ui->tableWidget->addAction(mShowInExplorer);
 	ui->tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 	connect(mShowInExplorer, &QAction::triggered,
-			[this](){ ShellExecutePath(ui->tableWidget->item(ui->tableWidget->currentRow(),1)->text()); });
+			[this](){ MyQShellExecute::ShellExecutePath(ui->tableWidget->item(ui->tableWidget->currentRow(),1)->text()); });
 
 	QDir pathBackup(QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files");
 	if(!pathBackup.exists()) pathBackup.mkdir(pathBackup.path());
@@ -61,18 +60,18 @@ IncludeParser::IncludeParser(QWidget *parent)
 
 	QString settingsFile = QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files/settings.stgs";
 	QStringList pustishka;
-	if(!mqd::LoadSettings(settingsFile, toSave, pustishka))
+	if(!MyQDifferent::LoadSettings(settingsFile, toSave, pustishka))
 		QMb(this,"Ошибка чтения настроек", "Не удалось загрузить настройки, будут установлены по умолчанию");
 }
 
 IncludeParser::~IncludeParser()
 {
-	QString pathFiles = mqd::GetPathToExe()+"/files";
-	if(!MQFD::CreatePath(pathFiles))
+	QString pathFiles = MyQDifferent::PathToExe()+"/files";
+	if(!MyQFileDir::CreatePath(pathFiles))
 		QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла настроек, невозможно сохранить настройки");
 
 	QString settingsFile = pathFiles + "/settings.stgs";
-	if(!mqd::SaveSettings(settingsFile, toSave, {}))
+	if(!MyQDifferent::SaveSettings(settingsFile, toSave, {}))
 		QMb(this,"Error", "Не удалось сохранить файл настроек "+settingsFile);
 
 	delete ui;
@@ -88,6 +87,11 @@ void IncludeParser::on_pushButtonScan_clicked()
 	if(res != "") QMbw(this, "Errors", "Erros while scan files:\n" + res);
 
 	vfi.PrintVectFiles(ui->tableWidget);
+	QString text;
+	if(vfi.countOldFilesTotal == 0) text = "Все файлы обновлены";
+	else if(vfi.countOldFilesTotal == 1) text = "Требуется обновление для " + QSn(vfi.countOldFilesTotal) + " файла";
+	else text = "Требуются обновления для " + QSn(vfi.countOldFilesTotal) + " файлов";
+	ui->labelTextResult->setText(text);
 }
 
 void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
@@ -137,11 +141,11 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 				filesToReplace += f;
 
 		if(!filesToReplace.empty())
-			MQFD::ReplaceFilesWithBackup(filesToReplace,fileFind->info, vfi.backupPath);
+			MyQFileDir::ReplaceFilesWithBackup(filesToReplace,fileFind->info, vfi.backupPath);
 	}
 	else if(messageBox.buttons()[desision]->text() == replaceHimByNewest) // кликнутый заменяем самым новым
 	{
-		QFileInfo newestModifFI = MQFD::GetNewestFI(filesFind->GetQFileInfoList());
+		QFileInfo newestModifFI = MyQFileDir::GetNewestFI(filesFind->GetQFileInfoList());
 
 		// если наш файл новее новейшего - неправльно определён новейший
 		if(fileFind->info.lastModified() > newestModifFI.lastModified()) QMb(this,"Ошибка","Ошибка desision == 1. Код ошибки 505");
@@ -152,7 +156,7 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 			if(QMessageBox::question(this, "Замена файла", "Заменить файл:\n" + fileFind->info.filePath() + "\n\nфайлом:\n"
 									 + newestModifFI.filePath() + "?\n(Резервные копии будут сохранены)",
 									 QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes)
-				MQFD::ReplaceFileWhithBacup(newestModifFI, fileFind->info, vfi.backupPath);
+				MyQFileDir::ReplaceFileWhithBacup(newestModifFI, fileFind->info, vfi.backupPath);
 		}
 	}
 	else if(messageBox.buttons()[desision]->text() == replaceNothing) ;  // Ничего
@@ -163,25 +167,21 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 
 void IncludeParser::on_pushButtonMassUpdate_clicked()
 {
-	CheckBoxDialog *chDial = new CheckBoxDialog;
 	QStringList values;
 
 	for(auto &f:vfi.vectFiles)
 		if(f.needUpdate)
 			values += f.name;
 
-	chDial->Execute(values);
+	auto chBoxDialogRes = MyQDialogs::CheckBoxDialog(values);
+	if(!chBoxDialogRes.accepted) return;
 
-	QStringList chValues = chDial->GetCheckedValues();
-
-	for(int i=0; i<chValues.size(); i++)
+	for(int i=0; i<chBoxDialogRes.checkedTexts.size(); i++)
 	{
 		for(auto &f:vfi.vectFiles)
-			if(chValues[i] == f.name)
+			if(chBoxDialogRes.checkedTexts[i] == f.name)
 				f.UpdateFiles();
 	}
-
-	delete chDial;
 
 	on_pushButtonScan_clicked();
 }

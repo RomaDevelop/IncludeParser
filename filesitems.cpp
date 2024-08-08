@@ -11,7 +11,7 @@ void FilesItems::UpdateFiles()
 {
 	// нужно найти новейший
 	QFileInfoList fiListAll = this->GetQFileInfoList();
-	QFileInfo newestModifFI = MQFD::GetNewestFI(fiListAll);
+	QFileInfo newestModifFI = MyQFileDir::GetNewestFI(fiListAll);
 
 	// нужно найти все не новейшие
 	QFileInfoList fiListToReplace;
@@ -19,7 +19,7 @@ void FilesItems::UpdateFiles()
 		if(fi.lastModified() < newestModifFI.lastModified()) fiListToReplace += fi;
 
 	// нужно заменить с запросом
-	MQFD::ReplaceFilesWithBackup(fiListToReplace, newestModifFI, backupPath);
+	MyQFileDir::ReplaceFilesWithBackup(fiListToReplace, newestModifFI, backupPath);
 }
 
 QFileInfoList FilesItems::GetQFileInfoList()
@@ -39,10 +39,11 @@ int vectFilesItems::IndexOf(QString name)
 
 bool vectFilesItems::Check(const QStringList &chekList, QString val)
 {
+
 	for(auto c:chekList)
 	{
-		c.replace("\\","/");
-		if(c != "" && val.toLower().indexOf(c.toLower()) != -1) return false;
+		if(c != "" && val.toLower().contains(c.toLower()))
+			return false;
 	}
 	return true;
 }
@@ -59,7 +60,11 @@ bool vectFilesItems::CheckExt(const QStringList &chekList, QString suffix)
 	return false;
 }
 
-QString vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringList &exts, const QStringList &fnameExept, const QStringList &pathExept, bool hideOneFile)
+QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
+								  const QStringList &exts,
+								  const QStringList &fnameExept,
+								  const QStringList &pathExept,
+								  bool hideOneFile)
 {
 	QString error;
 	vectFiles.clear();
@@ -68,15 +73,15 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringLi
 		QDir dir(d);
 		if(dir.exists())
 		{
-			QDirIterator it(dir.path(), QStringList(), QDir::NoFilter, QDirIterator::Subdirectories);
+			QDirIterator it(dir.path(), QStringList(), QDir::Files, QDirIterator::Subdirectories);
 			while (it.hasNext())
 			{
-				QFileInfo f(it.next());
-				if(Check(fnameExept,f.fileName()) && Check(pathExept,f.filePath()) && CheckExt(exts,f.suffix()))
+				QFileInfo file(it.next());
+				if(Check(fnameExept,file.fileName()) && Check(pathExept,file.path()) && CheckExt(exts,file.suffix()))
 				{
-					int ind = IndexOf(f.fileName());
-					if(ind == -1) vectFiles.push_back({f, backupPath});
-					else vectFiles[ind].filesItems.push_back(f);
+					int ind = IndexOf(file.fileName());
+					if(ind == -1) vectFiles.push_back({file, backupPath});
+					else vectFiles[ind].filesItems.push_back(file);
 				}
 			}
 		}
@@ -91,6 +96,53 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan, const QStringLi
 	sort(vectFiles.begin(),vectFiles.end(),[](FilesItems a, FilesItems b){
 		return a.name < b.name;
 	});
+
+	// определяем нуждающиеся в обновлении
+	for(uint i=0; i<vectFiles.size(); i++)
+	{
+		QDateTime lastestModified;  // определяем последнее обновление
+		for(uint j=0; j<vectFiles[i].filesItems.size(); j++)
+		{
+			if(vectFiles[i].filesItems[j].info.lastModified() > lastestModified)
+				lastestModified = vectFiles[i].filesItems[j].info.lastModified();
+		}
+
+		vectFiles[i].needUpdate = false;
+		for(uint j=0; j<vectFiles[i].filesItems.size(); j++)
+		{
+			if(vectFiles[i].filesItems[j].info.lastModified() == lastestModified)
+			{
+				vectFiles[i].filesItems[j].needUpdate = false;
+			}
+			else if(vectFiles[i].filesItems[j].info.lastModified() < lastestModified)
+			{
+				vectFiles[i].needUpdate = true;
+				vectFiles[i].filesItems[j].needUpdate = true;
+				countOldFilesTotal++;
+			}
+			else
+			{
+				QMb(nullptr,"","Error kod 50001");
+				break;
+			}
+		}
+	}
+
+	// считае количество нуждающихся в одновлении файлов
+	countOldFilesTotal = 0;
+	countOldFilesGroups = 0;
+	for(uint i=0; i<vectFiles.size(); i++)
+	{
+		if(vectFiles[i].needUpdate)
+			countOldFilesGroups++;
+
+		for(uint j=0; j<vectFiles[i].filesItems.size(); j++)
+		{
+			if(vectFiles[i].filesItems[j].needUpdate)
+				countOldFilesTotal++;
+		}
+	}
+
 	return error;
 }
 
@@ -120,34 +172,10 @@ void vectFilesItems::PrintVectFiles(QTableWidget *table)
 			table->setItem(indexRight, 2, new QTableWidgetItem(f.info.lastModified().toString(dateFormat)));
 			f.itemFile  = table->item(indexRight,1);
 			f.itemModif = table->item(indexRight,2);
+			if(f.needUpdate) { f.itemFile->setBackgroundColor(colorOld); f.itemModif->setBackgroundColor(colorOld); }
+			else { f.itemFile->setBackgroundColor(colorNew); f.itemModif->setBackgroundColor(colorNew); }
 			indexRight++;
 		}
 		if(indexRight > index) index = indexRight;
-	}
-
-	// выделение цветом
-	for(uint i=0; i<vectFiles.size(); i++)
-	{
-		int MaxInd = 0;
-		for(uint j=0; j<vectFiles[i].filesItems.size(); j++)
-		{
-			if(vectFiles[i].filesItems[j].info.lastModified() > vectFiles[i].filesItems[MaxInd].info.lastModified()) MaxInd = j;
-		}
-
-		for(uint j=0; j<vectFiles[i].filesItems.size(); j++)
-		{
-			if(vectFiles[i].filesItems[j].info.lastModified() == vectFiles[i].filesItems[MaxInd].info.lastModified())
-			{
-				vectFiles[i].filesItems[j].itemFile->setBackgroundColor(colorNew);
-				vectFiles[i].filesItems[j].itemModif->setBackgroundColor(colorNew);
-			}
-			else if(vectFiles[i].filesItems[j].info.lastModified() < vectFiles[i].filesItems[MaxInd].info.lastModified())
-			{
-				vectFiles[i].needUpdate = true;
-				vectFiles[i].filesItems[j].itemFile->setBackgroundColor(colorOld);
-				vectFiles[i].filesItems[j].itemModif->setBackgroundColor(colorOld);
-			}
-			else QMb(nullptr,"","Error kod 50001");
-		}
 	}
 }

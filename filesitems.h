@@ -19,6 +19,7 @@ public:
 	QFileInfo info;
 	QTableWidgetItem *itemFile {nullptr};
 	QTableWidgetItem *itemModif {nullptr};
+	bool needUpdate = false;
 	FileItem(const QFileInfo &info): info {info} {}
 };
 
@@ -28,7 +29,7 @@ public:
 	QString name;
 	QTableWidgetItem *item {nullptr};
 	std::vector<FileItem> filesItems;
-	bool needUpdate {false};
+	bool needUpdate = false;
 	QString backupPath;
 
 	FilesItems(const QFileInfo &info, QString backupPath_);
@@ -40,6 +41,8 @@ class vectFilesItems
 {
 public:
 	std::vector<FilesItems> vectFiles;
+	int countOldFilesGroups = 0;
+	int countOldFilesTotal = 0;
 	QString backupPath;
 
 	QColor colorNew{146,208,80};
