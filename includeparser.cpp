@@ -28,6 +28,13 @@ using namespace std;
 
 vectFilesItems vfi;
 
+void ReplaceInTextEdit(QTextEdit *textEdit)
+{
+	auto text = textEdit->toPlainText();
+	text.replace('\\','/');
+	textEdit->setPlainText(text);
+}
+
 IncludeParser::IncludeParser(QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::IncludeParser)
@@ -43,6 +50,7 @@ IncludeParser::IncludeParser(QWidget *parent)
 
 	QAction *mShowInExplorer = new QAction("Показать в проводнике", ui->tableWidget);
 	ui->tableWidget->addAction(mShowInExplorer);
+	ui->tableWidget->addAction(new QAction("Показать в проводник1е", ui->tableWidget));
 	ui->tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 	connect(mShowInExplorer, &QAction::triggered,
 			[this](){ MyQShellExecute::ShellExecutePath(ui->tableWidget->item(ui->tableWidget->currentRow(),1)->text()); });
@@ -66,6 +74,10 @@ IncludeParser::IncludeParser(QWidget *parent)
 
 IncludeParser::~IncludeParser()
 {
+	ReplaceInTextEdit(ui->textEditScan);
+	ReplaceInTextEdit(ui->textEditExeptFName);
+	ReplaceInTextEdit(ui->textEditExeptFPath);
+
 	QString pathFiles = MyQDifferent::PathToExe()+"/files";
 	if(!MyQFileDir::CreatePath(pathFiles))
 		QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла настроек, невозможно сохранить настройки");
@@ -79,6 +91,10 @@ IncludeParser::~IncludeParser()
 
 void IncludeParser::on_pushButtonScan_clicked()
 {
+	ReplaceInTextEdit(ui->textEditScan);
+	ReplaceInTextEdit(ui->textEditExeptFName);
+	ReplaceInTextEdit(ui->textEditExeptFPath);
+
 	QString res = vfi.ScanFiles(ui->textEditScan->toPlainText().split("\n"),
 								ui->lineEditExts->text().split(";"),
 								ui->textEditExeptFName->toPlainText().split("\n"),
