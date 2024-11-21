@@ -62,7 +62,8 @@ public:
 					  const QStringList &pathExept,
 					  bool hideOneFile);
 
-	void PrintVectFiles(QTableWidget *table);
+	enum { showAll, showNeedUpdate };
+	void PrintVectFiles(QTableWidget *table, int showCode);
 };
 
 #endif // FILESITEMS_H

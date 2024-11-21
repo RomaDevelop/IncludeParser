@@ -20,7 +20,7 @@ using namespace std;
 
 #include "MyQFileDir.h"
 #include "MyQShortings.h"
-#include "MyQShellExecute.h"
+#include "MyQExecute.h"
 #include "MyQDifferent.h"
 #include "MyQDialogs.h"
 
@@ -47,13 +47,13 @@ IncludeParser::IncludeParser(QWidget *parent)
 	toSave.push_back(ui->textEditExeptFName);
 	toSave.push_back(ui->textEditExeptFPath);
 	toSave.push_back(ui->checkBoxHideIfOne);
+	toSave.push_back(ui->checkBoxHideUpdated);
 
+	ui->tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 	QAction *mShowInExplorer = new QAction("Показать в проводнике", ui->tableWidget);
 	ui->tableWidget->addAction(mShowInExplorer);
-	ui->tableWidget->addAction(new QAction("Показать в проводник1е", ui->tableWidget));
-	ui->tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 	connect(mShowInExplorer, &QAction::triggered,
-			[this](){ MyQShellExecute::ShellExecutePath(ui->tableWidget->item(ui->tableWidget->currentRow(),1)->text()); });
+			[this](){ MyQExecute::ShowInExplorer(ui->tableWidget->item(ui->tableWidget->currentRow(),1)->text()); });
 
 	QDir pathBackup(QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files");
 	if(!pathBackup.exists()) pathBackup.mkdir(pathBackup.path());
@@ -79,7 +79,7 @@ IncludeParser::~IncludeParser()
 	ReplaceInTextEdit(ui->textEditExeptFPath);
 
 	QString pathFiles = MyQDifferent::PathToExe()+"/files";
-	if(!MyQFileDir::CreatePath(pathFiles))
+	if(!QDir().mkpath(pathFiles))
 		QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла настроек, невозможно сохранить настройки");
 
 	QString settingsFile = pathFiles + "/settings.stgs";
@@ -102,7 +102,9 @@ void IncludeParser::on_pushButtonScan_clicked()
 								ui->checkBoxHideIfOne->isChecked());
 	if(res != "") QMbw(this, "Errors", "Erros while scan files:\n" + res);
 
-	vfi.PrintVectFiles(ui->tableWidget);
+	if(ui->checkBoxHideUpdated->isChecked())
+		vfi.PrintVectFiles(ui->tableWidget, vectFilesItems::showNeedUpdate);
+	else vfi.PrintVectFiles(ui->tableWidget, vectFilesItems::showAll);
 	QString text;
 	if(vfi.countOldFilesTotal == 0) text = "Все файлы обновлены";
 	else if(vfi.countOldFilesTotal == 1) text = "Требуется обновление для " + QSn(vfi.countOldFilesTotal) + " файла";
@@ -161,7 +163,7 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 	}
 	else if(messageBox.buttons()[desision]->text() == replaceHimByNewest) // кликнутый заменяем самым новым
 	{
-		QFileInfo newestModifFI = MyQFileDir::GetNewestFI(filesFind->GetQFileInfoList());
+		QFileInfo newestModifFI = MyQFileDir::FindNewest(filesFind->GetQFileInfoList());
 
 		// если наш файл новее новейшего - неправльно определён новейший
 		if(fileFind->info.lastModified() > newestModifFI.lastModified()) QMb(this,"Ошибка","Ошибка desision == 1. Код ошибки 505");
@@ -172,7 +174,7 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 			if(QMessageBox::question(this, "Замена файла", "Заменить файл:\n" + fileFind->info.filePath() + "\n\nфайлом:\n"
 									 + newestModifFI.filePath() + "?\n(Резервные копии будут сохранены)",
 									 QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes)
-				MyQFileDir::ReplaceFileWhithBacup(newestModifFI, fileFind->info, vfi.backupPath);
+				MyQFileDir::ReplaceFileWithBackup(newestModifFI, fileFind->info, vfi.backupPath);
 		}
 	}
 	else if(messageBox.buttons()[desision]->text() == replaceNothing) ;  // Ничего

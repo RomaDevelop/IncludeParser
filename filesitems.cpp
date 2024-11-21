@@ -11,7 +11,7 @@ void FilesItems::UpdateFiles()
 {
 	// нужно найти новейший
 	QFileInfoList fiListAll = this->GetQFileInfoList();
-	QFileInfo newestModifFI = MyQFileDir::GetNewestFI(fiListAll);
+	QFileInfo newestModifFI = MyQFileDir::FindNewest(fiListAll);
 
 	// нужно найти все не новейшие
 	QFileInfoList fiListToReplace;
@@ -146,7 +146,7 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
 	return error;
 }
 
-void vectFilesItems::PrintVectFiles(QTableWidget *table)
+void vectFilesItems::PrintVectFiles(QTableWidget *table, int showCode)
 {
 	table->setRowCount(0);
 	table->clear();
@@ -154,12 +154,15 @@ void vectFilesItems::PrintVectFiles(QTableWidget *table)
 	table->setColumnWidth(0, table->width()*0.30);
 	table->setColumnWidth(1, table->width()*0.50);
 	table->setColumnWidth(2, table->width()*0.15);
-	//while(1000 >= table->rowCount()) table->insertRow(0);
 
 	int index=0;
 	int indexRight = 0;
 	for(auto &vf:vectFiles)
 	{
+		if(showCode == showAll) {}
+		else if(showCode == showNeedUpdate) { if(!vf.needUpdate) continue; }
+		else { QMbc(nullptr, "wrong showCode", "wrong showCode"); }
+
 		while(index >= table->rowCount()) table->insertRow(index);
 		table->setItem(index, 0, new QTableWidgetItem(vf.name));
 		vf.item = table->item(index,0);
