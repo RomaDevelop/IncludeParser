@@ -1,8 +1,6 @@
 #include "includeparser.h"
 #include "ui_includeparser.h"
 
-#include <windows.h>
-
 #include <memory>
 #include <algorithm>
 #include <vector>
