@@ -146,39 +146,4 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
 	return error;
 }
 
-void vectFilesItems::PrintVectFiles(QTableWidget *table, int showCode)
-{
-	table->setRowCount(0);
-	table->clear();
-	table->setColumnCount(3);
-	table->setColumnWidth(0, table->width()*0.30);
-	table->setColumnWidth(1, table->width()*0.50);
-	table->setColumnWidth(2, table->width()*0.15);
 
-	int index=0;
-	int indexRight = 0;
-	for(auto &vf:vectFiles)
-	{
-		if(showCode == showAll) {}
-		else if(showCode == showNeedUpdate) { if(!vf.needUpdate) continue; }
-		else { QMbc(nullptr, "wrong showCode", "wrong showCode"); }
-
-		while(index >= table->rowCount()) table->insertRow(index);
-		table->setItem(index, 0, new QTableWidgetItem(vf.name));
-		vf.item = table->item(index,0);
-		indexRight = index;
-		index++;
-		for(auto &f:vf.filesItems)
-		{
-			while(indexRight >= table->rowCount()) table->insertRow(indexRight);
-			table->setItem(indexRight, 1, new QTableWidgetItem(f.info.filePath()));
-			table->setItem(indexRight, 2, new QTableWidgetItem(f.info.lastModified().toString(dateFormat)));
-			f.itemFile  = table->item(indexRight,1);
-			f.itemModif = table->item(indexRight,2);
-			if(f.needUpdate) { f.itemFile->setBackgroundColor(colorOld); f.itemModif->setBackgroundColor(colorOld); }
-			else { f.itemFile->setBackgroundColor(colorNew); f.itemModif->setBackgroundColor(colorNew); }
-			indexRight++;
-		}
-		if(indexRight > index) index = indexRight;
-	}
-}

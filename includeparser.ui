@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1567</width>
-    <height>711</height>
+    <height>742</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>600</y>
+      <y>630</y>
       <width>371</width>
       <height>23</height>
      </rect>
@@ -33,7 +33,7 @@
       <x>390</x>
       <y>10</y>
       <width>1171</width>
-      <height>671</height>
+      <height>701</height>
      </rect>
     </property>
     <property name="editTriggers">
@@ -88,7 +88,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>430</y>
+      <y>460</y>
       <width>371</width>
       <height>141</height>
      </rect>
@@ -136,7 +136,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>410</y>
+      <y>440</y>
       <width>171</width>
       <height>16</height>
      </rect>
@@ -180,7 +180,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>580</y>
+      <y>610</y>
       <width>181</width>
       <height>17</height>
      </rect>
@@ -196,7 +196,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>660</y>
+      <y>690</y>
       <width>371</width>
       <height>23</height>
      </rect>
@@ -209,7 +209,7 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>630</y>
+      <y>660</y>
       <width>371</width>
       <height>21</height>
      </rect>
@@ -227,13 +227,39 @@ p, li { white-space: pre-wrap; }
     <property name="geometry">
      <rect>
       <x>190</x>
-      <y>580</y>
+      <y>610</y>
       <width>151</width>
       <height>17</height>
      </rect>
     </property>
     <property name="text">
      <string>Скрывать обновлённые</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnExeptReleases">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>410</y>
+      <width>371</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Исключения выпусков</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="chBoxExeptReleases">
+    <property name="geometry">
+     <rect>
+      <x>363</x>
+      <y>412</y>
+      <width>21</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
     </property>
    </widget>
   </widget>

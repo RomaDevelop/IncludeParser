@@ -2,10 +2,11 @@
 #define INCLUDEPARSER_H
 
 #include <vector>
-using namespace std;
 
 #include <QDialog>
 #include <QMainWindow>
+
+#include "filesitems.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class IncludeParser; }
@@ -15,10 +16,23 @@ class IncludeParser : public QMainWindow
 {
 	Q_OBJECT
 
-	vector<QWidget*> toSave;
+	std::vector<QWidget*> toSave;
+
 public:
 	IncludeParser(QWidget *parent = nullptr);
 	~IncludeParser();
+	void CreateContextMenu();
+
+private:
+	vectFilesItems vfi;
+	void PrintVectFiles(int showCode);
+
+private:
+	QStringList releases;
+	void EditReleases();
+	const QStringList& GetReleases();
+	void AddRelease();
+	void RemoveUnexitingRealeses();
 
 private slots:
 	void on_pushButtonScan_clicked();
@@ -29,5 +43,6 @@ private slots:
 
 private:
 	Ui::IncludeParser *ui;
+	enum cols { colFileName = 0, colFilePathName = 1, colLastModified = 2};
 };
 #endif // INCLUDEPARSER_H

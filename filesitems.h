@@ -45,9 +45,9 @@ public:
 	int countOldFilesTotal = 0;
 	QString backupPath;
 
-	QColor colorNew{146,208,80};
-	QColor colorOld{255,180,180};
-	QString dateFormat { "yyyy.MM.dd hh:mm:ss:zzz" };
+	inline static QColor colorNew{146,208,80};
+	inline static QColor colorOld{255,180,180};
+	inline static QString dateFormat { "yyyy.MM.dd hh:mm:ss:zzz" };
 
 	vectFilesItems() = default;
 	vectFilesItems(QString backupPath_): backupPath{backupPath_} {}
@@ -63,7 +63,6 @@ public:
 					  bool hideOneFile);
 
 	enum { showAll, showNeedUpdate };
-	void PrintVectFiles(QTableWidget *table, int showCode);
 };
 
 #endif // FILESITEMS_H
