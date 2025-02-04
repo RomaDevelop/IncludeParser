@@ -92,7 +92,7 @@ void IncludeParser::CreateContextMenu()
 		MyQExecute::ShowInExplorer(ui->tableWidget->item(ui->tableWidget->currentRow(),colFilePathName)->text());
 	});
 
-	QAction *mAddInReleases = new QAction("Добавить в исключения дистрибутивов", ui->tableWidget);
+	QAction *mAddInReleases = new QAction("Добавить в исключения выпусков", ui->tableWidget);
 	ui->tableWidget->addAction(mAddInReleases);
 	connect(mAddInReleases, &QAction::triggered, this, &IncludeParser::AddRelease);
 }
@@ -123,11 +123,20 @@ void IncludeParser::PrintVectFiles(int showCode)
 		{
 			while(indexRight >= ui->tableWidget->rowCount()) ui->tableWidget->insertRow(indexRight);
 			ui->tableWidget->setItem(indexRight, colFilePathName, new QTableWidgetItem(f.info.filePath()));
-			ui->tableWidget->setItem(indexRight, colLastModified, new QTableWidgetItem(f.info.lastModified().toString(vectFilesItems::dateFormat)));
+			ui->tableWidget->setItem(indexRight, colLastModified,
+									 new QTableWidgetItem(f.info.lastModified().toString(vectFilesItems::dateFormat)));
 			f.itemFile  = ui->tableWidget->item(indexRight,colFilePathName);
 			f.itemModif = ui->tableWidget->item(indexRight,colLastModified);
-			if(f.needUpdate) { f.itemFile->setBackgroundColor(vectFilesItems::colorOld); f.itemModif->setBackgroundColor(vectFilesItems::colorOld); }
-			else { f.itemFile->setBackgroundColor(vectFilesItems::colorNew); f.itemModif->setBackgroundColor(vectFilesItems::colorNew); }
+			if(f.needUpdate)
+			{
+				f.itemFile->setBackgroundColor(vectFilesItems::colorOld);
+				f.itemModif->setBackgroundColor(vectFilesItems::colorOld);
+			}
+			else
+			{
+				f.itemFile->setBackgroundColor(vectFilesItems::colorNew);
+				f.itemModif->setBackgroundColor(vectFilesItems::colorNew);
+			}
 			indexRight++;
 		}
 		if(indexRight > index) index = indexRight;
