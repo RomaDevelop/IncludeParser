@@ -58,6 +58,8 @@ IncludeParser::IncludeParser(QWidget *parent)
 	}
 	vfi.backupPath = pathBackup.path();
 
+	MyQFileDir::RemoveOldFiles(vfi.backupPath,300);
+
 	connect(ui->btnExeptReleases, &QPushButton::clicked, this, &IncludeParser::EditReleases);
 
 	QString settingsFile = QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files/settings.stgs";
@@ -229,10 +231,10 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 	QString replaceHimByNewest = "    Заменить его новейшим    ";
 	QString replaceAllByHim = "    Заменить им все " + filesFind->name+"    ";
 	QString replaceNothing = "  Ничего  ";
+
 	if(fileFind->itemFile->backgroundColor() == vfi.colorNew) //порядок кнопок
 	{
 		messageBox.addButton(replaceAllByHim,QMessageBox::YesRole);
-		messageBox.addButton(replaceHimByNewest,QMessageBox::YesRole);
 	}
 	else
 	{
