@@ -10,6 +10,7 @@ using namespace std;
 #include <QDebug>
 #include <QDir>
 #include <QFile>
+#include <QFileDialog>
 #include <QDirIterator>
 #include <QDateTime>
 #include <QMessageBox>
@@ -36,6 +37,8 @@ IncludeParser::IncludeParser(QWidget *parent)
 	ui->setupUi(this);
 	this->move(30,30);
 
+	connect(ui->pushButtonScan, &QPushButton::clicked, this, &IncludeParser::SlotScan);
+
 	toSave.push_back(ui->textEditScan);
 	toSave.push_back(ui->lineEditExts);
 	toSave.push_back(ui->textEditExeptFName);
@@ -60,7 +63,19 @@ IncludeParser::IncludeParser(QWidget *parent)
 
 	MyQFileDir::RemoveOldFiles(vfi.backupPath,300);
 
-	connect(ui->btnExeptReleases, &QPushButton::clicked, this, &IncludeParser::EditReleases);
+	auto addRelease = [this](){
+		QString dir = QFileDialog::getExistingDirectory(nullptr, "Select directory");
+		if(dir.isEmpty()) return;
+		AddRelease(dir);
+	};
+
+	connect(ui->btnExeptReleases, &QPushButton::clicked, [this, addRelease](){
+		std::vector<MyQDialogs::MenuItem> items = {
+			{"Редактировать", [this](){ EditReleases(); }},
+			{"Добавить", addRelease}
+		};
+		MyQDialogs::MenuUnderWidget(ui->btnExeptReleases, items);
+	});
 
 	QString settingsFile = QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files/settings.stgs";
 	if(!MyQDifferent::LoadSettings(settingsFile, toSave, releases))
@@ -78,7 +93,7 @@ IncludeParser::~IncludeParser()
 		QMessageBox::information(this, "Ошибка", "Ошибка создания директории для файла настроек, невозможно сохранить настройки");
 
 	QString settingsFile = pathFiles + "/settings.stgs";
-	if(!MyQDifferent::SaveSettings(settingsFile, toSave, GetReleases()))
+	if(!MyQDifferent::SaveSettings(settingsFile, toSave, releases))
 		QMb(this,"Error", "Не удалось сохранить файл настроек "+settingsFile);
 
 	delete ui;
@@ -96,7 +111,9 @@ void IncludeParser::CreateContextMenu()
 
 	QAction *mAddInReleases = new QAction("Добавить в исключения выпусков", ui->tableWidget);
 	ui->tableWidget->addAction(mAddInReleases);
-	connect(mAddInReleases, &QAction::triggered, this, &IncludeParser::AddRelease);
+	connect(mAddInReleases, &QAction::triggered, [this](){
+		AddRelease(ui->tableWidget->item(ui->tableWidget->currentRow(),colFilePathName)->text());
+	});
 }
 
 void IncludeParser::PrintVectFiles(int showCode)
@@ -147,33 +164,40 @@ void IncludeParser::PrintVectFiles(int showCode)
 
 void IncludeParser::EditReleases()
 {
-	auto tableUptr = MyQDialogs::Table({GetReleases()}, {"Путь к дистрибутиву"});
+	releases.sort();
+	auto res = MyQDialogs::TableOneCol("Редактирование дистрибутивов", releases, {"Путь к дистрибутиву"});
+	if(!res.accepted) return;
+
+	auto &tableUptr = res.table;
 	QStringList newReleases;
 	for(int row = 0; row<tableUptr->rowCount(); row++)
 	{
-		newReleases += tableUptr->item(row, 0)->text();
+		newReleases += tableUptr->item(row, 0)->text().replace("\\", "/");
 	}
 	releases = std::move(newReleases);
 	RemoveUnexitingRealeses();
 }
 
-const QStringList & IncludeParser::GetReleases()
+QStringList IncludeParser::GetReleasesAsMasks()
 {
 	RemoveUnexitingRealeses();
-	return releases;
+	QStringList releasesRet = releases;
+	for(auto &release:releasesRet)
+		if(!release.endsWith('*')) release += '*';
+	return releasesRet;
 }
 
-void IncludeParser::AddRelease()
+void IncludeParser::AddRelease(QString dir, bool showInputLineDialog)
 {
-	QString textFromTable = ui->tableWidget->item(ui->tableWidget->currentRow(),colFilePathName)->text();
-	QString release = MyQDialogs::InputText("Укжите путь к дистрибутиву", textFromTable, 700, 200);
-	if(!QFileInfo(release).isDir()) { QMbi(this, "Ошибка", "Указанное значение не является каталогом"); return; }
-	if(releases.contains(release)) { QMbi(this, "Ошибка", "Указанное значение уже добавлено"); return; }
+	if(showInputLineDialog)
+		dir = MyQDialogs::InputLine("Добавление дистрибутива", "Проверьте путь к дистрибутиву", dir, 800).text;
 
-	release.replace("\\", "/");
-	releases += release;
+	if(dir.isEmpty()) { return; }
+	if(!QFileInfo(dir).isDir()) { QMbi(this, "Ошибка", "Указанное значение не является каталогом"); return; }
+	if(releases.contains(dir)) { QMbi(this, "Ошибка", "Указанное значение уже добавлено"); return; }
 
-	on_pushButtonScan_clicked();
+	dir.replace("\\", "/");
+	releases += dir;
 }
 
 void IncludeParser::RemoveUnexitingRealeses()
@@ -182,14 +206,14 @@ void IncludeParser::RemoveUnexitingRealeses()
 	releases.erase(removeRes, releases.end());
 }
 
-void IncludeParser::on_pushButtonScan_clicked()
+void IncludeParser::SlotScan()
 {
 	ReplaceSleshesInTextEdit(ui->textEditScan);
 	ReplaceSleshesInTextEdit(ui->textEditExeptFName);
 	ReplaceSleshesInTextEdit(ui->textEditExeptFPath);
 
 	QStringList pathsExept = ui->textEditExeptFPath->toPlainText().split("\n");
-	if(ui->chBoxExeptReleases->isChecked()) pathsExept += GetReleases();
+	if(ui->chBoxExeptReleases->isChecked()) pathsExept += GetReleasesAsMasks();
 
 	QString res = vfi.ScanFiles(ui->textEditScan->toPlainText().split("\n"),
 								ui->lineEditExts->text().split(";"),
@@ -276,7 +300,7 @@ void IncludeParser::on_tableWidget_cellDoubleClicked(int row, int column)
 	else if(messageBox.buttons()[desision]->text() == replaceNothing) ;  // Ничего
 	else QMb(this,"Error","Error code 50002");
 
-	on_pushButtonScan_clicked();
+	SlotScan();
 }
 
 void IncludeParser::on_pushButtonMassUpdate_clicked()
@@ -287,7 +311,7 @@ void IncludeParser::on_pushButtonMassUpdate_clicked()
 		if(f.needUpdate)
 			values += f.name;
 
-	auto chBoxDialogRes = MyQDialogs::CheckBoxDialog(values);
+	auto chBoxDialogRes = MyQDialogs::CheckBoxDialog("Выберите объекты для обновления",values);
 	if(!chBoxDialogRes.accepted) return;
 
 	for(int i=0; i<chBoxDialogRes.checkedTexts.size(); i++)
@@ -297,5 +321,5 @@ void IncludeParser::on_pushButtonMassUpdate_clicked()
 				f.UpdateFiles();
 	}
 
-	on_pushButtonScan_clicked();
+	SlotScan();
 }

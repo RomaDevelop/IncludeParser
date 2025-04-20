@@ -30,16 +30,17 @@ private:
 private:
 	QStringList releases;
 	void EditReleases();
-	const QStringList& GetReleases();
-	void AddRelease();
+	QStringList GetReleasesAsMasks();
+	void AddRelease(QString dir, bool showInputLineDialog = true);
 	void RemoveUnexitingRealeses();
 
 private slots:
-	void on_pushButtonScan_clicked();
+	void SlotScan();
 
 	void on_tableWidget_cellDoubleClicked(int row, int column);
 
 	void on_pushButtonMassUpdate_clicked();
+
 
 private:
 	Ui::IncludeParser *ui;

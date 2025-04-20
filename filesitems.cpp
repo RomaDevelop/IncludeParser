@@ -37,12 +37,17 @@ int vectFilesItems::IndexOf(QString name)
 	return -1;
 }
 
-bool vectFilesItems::Check(const QStringList &chekList, QString val)
+bool vectFilesItems::CheckExcludeList(const QStringList &chekList, QString val)
 {
-
-	for(auto c:chekList)
+	for(auto mask:chekList)
 	{
-		if(c != "" && val.toLower().contains(c.toLower()))
+		//qdbg << mask << val;
+		mask = QRegularExpression::escape(mask);
+		mask.replace("\\*", ".*"); // Заменяем * на .*
+		mask = "^" + mask + "$"; // Начало и конец строки
+		QRegularExpression regex(mask, QRegularExpression::CaseInsensitiveOption);
+
+		if(regex.match(val).hasMatch())
 			return false;
 	}
 	return true;
@@ -77,7 +82,7 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
 			while (it.hasNext())
 			{
 				QFileInfo file(it.next());
-				if(Check(fnameExept,file.fileName()) && Check(pathExept,file.path()) && CheckExt(exts,file.suffix()))
+				if(CheckExt(exts,file.suffix()) && CheckExcludeList(fnameExept,file.fileName()) && CheckExcludeList(pathExept,file.path()))
 				{
 					int ind = IndexOf(file.fileName());
 					if(ind == -1) vectFiles.push_back({file, backupPath});
@@ -144,6 +149,73 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
 	}
 
 	return error;
+}
+
+bool vectFilesItems::TestCheckExcludeList()
+{
+	bool res = true;
+	QString errors;
+
+	std::vector<QStringList> masks;
+	QStringList vals;
+	std::vector<bool> answers;
+
+	masks.push_back({"*.cpp"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	masks.push_back({"Widget*"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	masks.push_back({"W*t*p"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	masks.push_back({"cpp"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(1);
+
+	masks.push_back({"Widget"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(1);
+
+	masks.push_back({"Widget.h"});
+	vals.push_back("AutoWidget.h");
+	answers.push_back(1);
+
+	masks.push_back({"W*t"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(1);
+
+	masks.push_back({"*.cpp", "Widget*", "W*t*p"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	masks.push_back({"*.cpp", "Widget*", "W*t"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	masks.push_back({"cpp", "Widget*", "W*t"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	// регистр
+	masks.push_back({"widget*"});
+	vals.push_back("Widget.cpp");
+	answers.push_back(0);
+
+	for(uint i=0; i<masks.size(); i++)
+	{
+		if(CheckExcludeList(masks[i], vals[i]) != answers[i])
+		{
+			errors += "test ["+QSn(i)+"]: wrong res for mask ["+masks[i].join(',')+"] and value ["+vals[i]+"]\n\n";
+			res = false;
+		}
+	}
+	if(!errors.isEmpty()) QMbError(errors);
+	else qdbg << "TestCheck ok";
+	return res;
 }
 
 

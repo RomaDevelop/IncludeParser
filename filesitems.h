@@ -54,8 +54,8 @@ public:
 
 	int IndexOf(QString name);
 
-	bool Check(const QStringList &chekList, QString val);
-	bool CheckExt(const QStringList &chekList, QString val);
+	static bool CheckExcludeList(const QStringList &chekList, QString val);
+	static bool CheckExt(const QStringList &chekList, QString val);
 	QString ScanFiles(const QStringList &dirsToScan,
 					  const QStringList &exts,
 					  const QStringList &fnameExept,
@@ -63,6 +63,8 @@ public:
 					  bool hideOneFile);
 
 	enum { showAll, showNeedUpdate };
+
+	static bool TestCheckExcludeList();
 };
 
 #endif // FILESITEMS_H
