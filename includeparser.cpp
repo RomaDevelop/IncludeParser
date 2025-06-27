@@ -63,18 +63,18 @@ IncludeParser::IncludeParser(QWidget *parent)
 
 	MyQFileDir::RemoveOldFiles(vfi.backupPath,300);
 
-	auto addRelease = [this](){
+	auto addReleaseFoo = [this](){
 		QString dir = QFileDialog::getExistingDirectory(nullptr, "Select directory");
 		if(dir.isEmpty()) return;
 		AddRelease(dir);
 	};
 
-	connect(ui->btnExeptReleases, &QPushButton::clicked, [this, addRelease](){
+	connect(ui->btnExeptReleases, &QPushButton::clicked, [this, addReleaseFoo](){
 		std::vector<MyQDialogs::MenuItem> items = {
 			{"Редактировать", [this](){ EditReleases(); }},
-			{"Добавить", addRelease}
+			{"Добавить", addReleaseFoo}
 		};
-		MyQDialogs::MenuUnderWidget(ui->btnExeptReleases, items);
+		MyQDialogs::MenuUnderWidget(ui->btnExeptReleases, std::move(items));
 	});
 
 	QString settingsFile = QFileInfo(QCoreApplication::applicationFilePath()).path() + "/files/settings.stgs";
@@ -175,12 +175,12 @@ void IncludeParser::EditReleases()
 		newReleases += tableUptr->item(row, 0)->text().replace("\\", "/");
 	}
 	releases = std::move(newReleases);
-	RemoveUnexitingRealeses();
+	RemoveUnexistingRealeses();
 }
 
 QStringList IncludeParser::GetReleasesAsMasks()
 {
-	RemoveUnexitingRealeses();
+	RemoveUnexistingRealeses();
 	QStringList releasesRet = releases;
 	for(auto &release:releasesRet)
 		if(!release.endsWith('*')) release += '*';
@@ -198,9 +198,12 @@ void IncludeParser::AddRelease(QString dir, bool showInputLineDialog)
 
 	dir.replace("\\", "/");
 	releases += dir;
+
+	vfi.FilterScannedFiles(GetReleasesAsMasks());
+	Print();
 }
 
-void IncludeParser::RemoveUnexitingRealeses()
+void IncludeParser::RemoveUnexistingRealeses()
 {
 	auto removeRes = std::remove_if(releases.begin(), releases.end(), [](const QString &release){ return !QFileInfo(release).isDir();});
 	releases.erase(removeRes, releases.end());
@@ -222,9 +225,15 @@ void IncludeParser::SlotScan()
 								ui->checkBoxHideIfOne->isChecked());
 	if(res != "") QMbw(this, "Errors", "Erros while scan files:\n" + res);
 
+	Print();
+}
+
+void IncludeParser::Print()
+{
 	if(ui->checkBoxHideUpdated->isChecked())
 		PrintVectFiles(vectFilesItems::showNeedUpdate);
 	else PrintVectFiles(vectFilesItems::showAll);
+
 	QString text;
 	if(vfi.countOldFilesTotal == 0) text = "Все файлы обновлены";
 	else if(vfi.countOldFilesTotal == 1) text = "Требуется обновление для " + QSn(vfi.countOldFilesTotal) + " файла";

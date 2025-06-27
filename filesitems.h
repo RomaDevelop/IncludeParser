@@ -61,6 +61,8 @@ public:
 					  const QStringList &fnameExept,
 					  const QStringList &pathExept,
 					  bool hideOneFile);
+	void FilterScannedFiles(const QStringList &pathExept);
+
 
 	enum { showAll, showNeedUpdate };
 

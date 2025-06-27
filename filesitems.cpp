@@ -151,6 +151,24 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
 	return error;
 }
 
+void vectFilesItems::FilterScannedFiles(const QStringList &pathExept)
+{
+	for(auto it_vfi=vectFiles.begin(); it_vfi!=vectFiles.end(); ++it_vfi)
+	{
+		auto remove_res = std::remove_if(it_vfi->filesItems.begin(), it_vfi->filesItems.end(),
+										 [&pathExept](FileItem &item){ return !CheckExcludeList(pathExept, item.info.path()); });
+
+		for(auto itByRemoving=remove_res; itByRemoving!=it_vfi->filesItems.end(); ++itByRemoving)
+			if(itByRemoving->needUpdate) countOldFilesTotal--;
+
+		it_vfi->filesItems.erase(remove_res, it_vfi->filesItems.end());
+	}
+
+	auto remove_res = std::remove_if(vectFiles.begin(), vectFiles.end(),
+									 [](FilesItems &items){ return items.filesItems.empty(); });
+	vectFiles.erase(remove_res, vectFiles.end());
+}
+
 bool vectFilesItems::TestCheckExcludeList()
 {
 	bool res = true;

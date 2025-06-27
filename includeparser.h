@@ -32,10 +32,11 @@ private:
 	void EditReleases();
 	QStringList GetReleasesAsMasks();
 	void AddRelease(QString dir, bool showInputLineDialog = true);
-	void RemoveUnexitingRealeses();
+	void RemoveUnexistingRealeses();
 
 private slots:
 	void SlotScan();
+	void Print();
 
 	void on_tableWidget_cellDoubleClicked(int row, int column);
 
