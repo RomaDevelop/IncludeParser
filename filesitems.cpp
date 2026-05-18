@@ -94,7 +94,7 @@ QString vectFilesItems::ScanFiles(const QStringList &dirsToScan,
 	}
 
 	if(hideOneFile)
-		for(int i=vectFiles.size()-1; i>=0; i--)
+		for(int i=static_cast<int>(vectFiles.size())-1; i>=0; i--)
 			if(vectFiles[i].filesItems.size() < 2)
 				vectFiles.erase(vectFiles.begin() + i);
 
